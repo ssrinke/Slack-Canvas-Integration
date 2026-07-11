@@ -9,7 +9,8 @@
   },
   "scripts": {
     "start": "node src/app.js",
-    "dev": "node --watch src/app.js"
+    "dev": "node --watch src/app.js",
+    "test": "rm -f db.json && node --test test/*.test.mjs"
   },
   "dependencies": {
     "@slack/bolt": "^4.1.0",

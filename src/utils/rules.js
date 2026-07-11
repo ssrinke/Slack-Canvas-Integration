@@ -54,7 +54,7 @@ function matchesScope(session, event) {
  * classifier when nothing else matched and it's enabled.
  */
 export async function evaluateMessage(session, event) {
-  const { userId: senderId, text, channel } = event;
+  const { user: senderId, text, channel } = event;
 
   // Snooze is scoped elsewhere (e.g. "everything except #incidents") —
   // if this message isn't in scope, don't even apply break-through rules;

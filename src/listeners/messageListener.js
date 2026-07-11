@@ -14,25 +14,34 @@ import { buildBreakThroughCard } from "../blockkit/cards.js";
  */
 export function registerMessageListener(app) {
   app.event("message", async ({ event, client, logger }) => {
-    // Ignore bot messages, message_changed/deleted subtypes, etc.
-    if (event.subtype || event.bot_id) return;
-    if (!event.user || !event.text) return;
-
-    const activeSessions = await getAllActiveSessions();
-    if (activeSessions.length === 0) return;
-
-    for (const session of activeSessions) {
-      if (session.userId === event.user) continue; // don't notify yourself
-
-      const { breaksThrough, reason } = await evaluateMessage(session, event);
-
-      if (breaksThrough) {
-        await deliverBreakThrough({ session, event, client, reason, logger });
-      } else {
-        await queueForDigest({ session, event, client, logger });
-      }
-    }
+    await processMessageEvent({ event, client, logger });
   });
+}
+
+/**
+ * Core logic, split out from the Bolt event registration so it can be
+ * exercised in tests with a mock client and a no-op logger, without
+ * spinning up a full Bolt App instance.
+ */
+export async function processMessageEvent({ event, client, logger = console }) {
+  // Ignore bot messages, message_changed/deleted subtypes, etc.
+  if (event.subtype || event.bot_id) return;
+  if (!event.user || !event.text) return;
+
+  const activeSessions = await getAllActiveSessions();
+  if (activeSessions.length === 0) return;
+
+  for (const session of activeSessions) {
+    if (session.userId === event.user) continue; // don't notify yourself
+
+    const { breaksThrough, reason } = await evaluateMessage(session, event);
+
+    if (breaksThrough) {
+      await deliverBreakThrough({ session, event, client, reason, logger });
+    } else {
+      await queueForDigest({ session, event, client, logger });
+    }
+  }
 }
 
 async function deliverBreakThrough({ session, event, client, reason, logger }) {
