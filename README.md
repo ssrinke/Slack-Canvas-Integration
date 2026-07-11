@@ -39,15 +39,23 @@ src/
 ## Setup
 
 1. Create a Slack app at api.slack.com/apps (or use an existing manifest-based one).
-   Scopes needed: `dnd:write`, `dnd:read`, `chat:write`, `channels:read`,
-   `users:read`, `im:write`. Subscribe to the `message.channels` (and
-   `message.groups`/`message.im` as needed) bot event.
+   **Bot Token Scopes**: `chat:write`, `channels:read`, `channels:history`,
+   `groups:history`, `users:read`, `im:write`.
+   **User Token Scopes**: `dnd:write`, `dnd:read` — these are user-scoped, not
+   bot-scoped, because Slack only lets a person silence their own
+   notifications, not a bot on their behalf. They live in a separate section
+   of OAuth & Permissions from the bot scopes above.
+   Subscribe to the `message.channels` (and `message.groups`/`message.im` as
+   needed) bot event.
 2. Enable Socket Mode for local dev and generate an app-level token (`xapp-...`).
-3. `cp .env.example .env` and fill in `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`,
-   `SLACK_APP_TOKEN`.
-4. `npm install`
-5. `npm run dev`
-6. In Slack, run `/focus`.
+3. Install the app (or reinstall, if scopes changed) — you'll get **two**
+   tokens on the OAuth & Permissions page: a Bot User OAuth Token (`xoxb-...`)
+   and a User OAuth Token (`xoxp-...`).
+4. `cp .env.example .env` and fill in `SLACK_BOT_TOKEN` (xoxb), `SLACK_USER_TOKEN`
+   (xoxp), `SLACK_SIGNING_SECRET`, `SLACK_APP_TOKEN`.
+5. `npm install`
+6. `npm run dev`
+7. In Slack, run `/focus`.
 
 ## Build order (matches hackathon plan)
 

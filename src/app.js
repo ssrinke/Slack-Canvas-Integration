@@ -1,6 +1,7 @@
 import "dotenv/config";
 import pkg from "@slack/bolt";
 const { App } = pkg;
+import { WebClient } from "@slack/web-api";
 
 import { initDb } from "./db/index.js";
 import { registerFocusCommand } from "./commands/focus.js";
@@ -16,7 +17,18 @@ const app = new App({
   port: process.env.PORT || 3000
 });
 
-registerFocusCommand(app);
+// dnd.setSnooze / dnd.endSnooze only work with a USER token (dnd:write is a
+// user-scoped permission) -- the bot token below is for everything else
+// (posting messages, listening to events).
+if (!process.env.SLACK_USER_TOKEN) {
+  console.warn(
+    "⚠️  SLACK_USER_TOKEN not set -- native dnd.setSnooze/endSnooze calls will fail. " +
+      "See .env.example: dnd:write/dnd:read are user token scopes, not bot scopes."
+  );
+}
+const userClient = new WebClient(process.env.SLACK_USER_TOKEN);
+
+registerFocusCommand(app, userClient);
 registerMessageListener(app);
 
 (async () => {

@@ -14,7 +14,7 @@ const DEFAULT_ALLOWED_SENDERS = (process.env.DEFAULT_ALLOWED_SENDERS || "")
   .map((s) => s.trim())
   .filter(Boolean);
 
-export function registerFocusCommand(app) {
+export function registerFocusCommand(app, userClient) {
   app.command("/focus", async ({ ack, body, client, logger }) => {
     await ack();
 
@@ -55,9 +55,11 @@ export function registerFocusCommand(app) {
 
     // 1. Set native Slack DND as the baseline — this is what stops mobile
     //    push / desktop notifications for anything we don't explicitly
-    //    break through ourselves.
+    //    break through ourselves. dnd.setSnooze is a USER-token method
+    //    (dnd:write is a user scope, not a bot scope), so this has to go
+    //    through userClient, not the bot's client.
     try {
-      await client.dnd.setSnooze({ num_minutes: durationMinutes });
+      await userClient.dnd.setSnooze({ num_minutes: durationMinutes });
     } catch (err) {
       logger.error("dnd.setSnooze failed", err);
       // Non-fatal: our own layer still works for break-through delivery,
@@ -65,7 +67,7 @@ export function registerFocusCommand(app) {
       // won't be silenced by Slack itself. Worth surfacing to the user.
       await client.chat.postMessage({
         channel: userId,
-        text: "⚠️ Couldn't set native Slack DND (missing `dnd:write` scope?), but focus mode is still tracking break-through rules."
+        text: "⚠️ Couldn't set native Slack DND (check SLACK_USER_TOKEN has `dnd:write`), but focus mode is still tracking break-through rules."
       });
     }
 
@@ -113,7 +115,7 @@ export function registerFocusCommand(app) {
     }
 
     try {
-      await client.dnd.endSnooze();
+      await userClient.dnd.endSnooze();
     } catch (err) {
       logger.warn("dnd.endSnooze failed (may have already lapsed)", err);
     }
