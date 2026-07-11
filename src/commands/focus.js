@@ -6,6 +6,7 @@ import {
 } from "../blockkit/focusModal.js";
 import { createSession, getActiveSessionForUser, endSession } from "../db/index.js";
 import { runDigestForSession } from "./digest.js";
+import { openDM } from "../utils/slackDm.js";
 
 // Hackathon-scoped: hard-coded fallback allowlist if the user hasn't
 // configured one elsewhere yet. Swap for a per-user settings lookup later.
@@ -20,13 +21,17 @@ export function registerFocusCommand(app, userClient) {
 
     const existing = await getActiveSessionForUser(body.user_id);
     if (existing) {
-      await client.chat.postEphemeral({
-        channel: body.channel_id,
-        user: body.user_id,
-        text: `You're already in focus mode until <!date^${Math.floor(
-          existing.endTime / 1000
-        )}^{time}|later today>. Use \`/unfocus\` to end it early.`
-      });
+      try {
+        await client.chat.postEphemeral({
+          channel: body.channel_id,
+          user: body.user_id,
+          text: `You're already in focus mode until <!date^${Math.floor(
+            existing.endTime / 1000
+          )}^{time}|later today>. Use \`/unfocus\` to end it early.`
+        });
+      } catch (err) {
+        logger.error("Failed to post ephemeral 'already in focus' notice", err);
+      }
       return;
     }
 
@@ -65,10 +70,15 @@ export function registerFocusCommand(app, userClient) {
       // Non-fatal: our own layer still works for break-through delivery,
       // it just means native notifications for non-matching messages
       // won't be silenced by Slack itself. Worth surfacing to the user.
-      await client.chat.postMessage({
-        channel: userId,
-        text: "⚠️ Couldn't set native Slack DND (check SLACK_USER_TOKEN has `dnd:write`), but focus mode is still tracking break-through rules."
-      });
+      try {
+        const dmChannelId = await openDM(client, userId);
+        await client.chat.postMessage({
+          channel: dmChannelId,
+          text: "⚠️ Couldn't set native Slack DND (check SLACK_USER_TOKEN has `dnd:write`), but focus mode is still tracking break-through rules."
+        });
+      } catch (dmErr) {
+        logger.error("Also failed to DM the dnd.setSnooze warning", dmErr);
+      }
     }
 
     // 2. Store the break-through ruleset for this session.
@@ -86,10 +96,15 @@ export function registerFocusCommand(app, userClient) {
     };
     await createSession(session);
 
-    await client.chat.postMessage({
-      channel: userId,
-      text: `🎯 Focus mode on for ${durationMinutes} min. ${summarizeRules(breakThroughRules)}`
-    });
+    try {
+      const dmChannelId = await openDM(client, userId);
+      await client.chat.postMessage({
+        channel: dmChannelId,
+        text: `🎯 Focus mode on for ${durationMinutes} min. ${summarizeRules(breakThroughRules)}`
+      });
+    } catch (err) {
+      logger.error("Failed to send focus-mode confirmation DM", err);
+    }
 
     // Schedule automatic end + digest. Fine for a hackathon demo;
     // for production swap this for a durable scheduler (e.g. a cron
@@ -106,11 +121,15 @@ export function registerFocusCommand(app, userClient) {
     await ack();
     const session = await getActiveSessionForUser(body.user_id);
     if (!session) {
-      await client.chat.postEphemeral({
-        channel: body.channel_id,
-        user: body.user_id,
-        text: "You're not in focus mode right now."
-      });
+      try {
+        await client.chat.postEphemeral({
+          channel: body.channel_id,
+          user: body.user_id,
+          text: "You're not in focus mode right now."
+        });
+      } catch (err) {
+        logger.error("Failed to post ephemeral 'not in focus' notice", err);
+      }
       return;
     }
 

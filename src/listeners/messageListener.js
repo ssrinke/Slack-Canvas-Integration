@@ -1,6 +1,7 @@
 import { getAllActiveSessions, updateSession } from "../db/index.js";
 import { evaluateMessage } from "../utils/rules.js";
 import { buildBreakThroughCard } from "../blockkit/cards.js";
+import { openDM } from "../utils/slackDm.js";
 
 /**
  * Registers a catch-all message listener. For every incoming message,
@@ -57,8 +58,10 @@ async function deliverBreakThrough({ session, event, client, reason, logger }) {
     const senderName = senderInfo?.user?.real_name || senderInfo?.user?.name || event.user;
     const channelName = channelInfo?.channel?.name || event.channel;
 
+    const dmChannelId = await openDM(client, session.userId);
+
     await client.chat.postMessage({
-      channel: session.userId,
+      channel: dmChannelId,
       text: `🔴 Break-through from ${senderName} in #${channelName}`,
       blocks: buildBreakThroughCard({
         senderName,

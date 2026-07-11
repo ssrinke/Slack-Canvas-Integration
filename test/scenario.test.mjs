@@ -98,7 +98,7 @@ test("full mock scenario: mixed messages produce correct break-throughs and dige
 
   assert.equal(client.calls.postMessage.length, 1, "digest should be a single message");
   const digestPayload = client.calls.postMessage[0];
-  assert.equal(digestPayload.channel, "U_OWNER");
+  assert.equal(digestPayload.channel, "D_U_OWNER");
   const digestText = JSON.stringify(digestPayload.blocks);
   assert.match(digestText, /general/); // channel grouping present
   assert.match(digestText, /coffee/);

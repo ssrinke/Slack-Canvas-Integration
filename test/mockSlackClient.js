@@ -36,6 +36,10 @@ export function createMockSlackClient({ users = {}, channels = {} } = {}) {
       info: async ({ channel }) => ({
         ok: true,
         channel: channels[channel] || { id: channel, name: channel }
+      }),
+      open: async ({ users }) => ({
+        ok: true,
+        channel: { id: `D_${users}` }
       })
     },
     views: {
